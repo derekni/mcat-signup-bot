@@ -13,7 +13,7 @@ const search_date = "Friday 24th of March 2023";
 
 const login = async () => {
   // launch new browser
-  browser = await puppeteer.launch({ headless: false });
+  browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' });
   page = await browser.newPage();
 
   // navigate to login, login
@@ -59,6 +59,13 @@ const login = async () => {
   await page.click('input[id="addressSearch"]');
   await timeout(3_000);
   let numQueries = 0;
+  client.messages
+    .create({
+      body: "Began searching for mcat locations.",
+      from: secrets.twilio_number,
+      to: secrets.phone,
+    })
+    .then((message) => console.log(message.sid));
   setInterval(async () => {
     await page.click('input[id="addressSearch"]');
     await timeout(3_000);

@@ -19,7 +19,7 @@ exports.getQueryHandlerAndSelector = exports.clearCustomQueryHandlers = exports.
 const AriaQueryHandler_js_1 = require("./AriaQueryHandler.js");
 const ElementHandle_js_1 = require("./ElementHandle.js");
 const Frame_js_1 = require("./Frame.js");
-const IsolatedWorld_js_1 = require("./IsolatedWorld.js");
+const IsolatedWorlds_js_1 = require("./IsolatedWorlds.js");
 function createPuppeteerQueryHandler(handler) {
     const internalHandler = {};
     if (handler.queryOne) {
@@ -41,9 +41,9 @@ function createPuppeteerQueryHandler(handler) {
             }
             else {
                 frame = elementOrFrame.frame;
-                element = await frame.worlds[IsolatedWorld_js_1.PUPPETEER_WORLD].adoptHandle(elementOrFrame);
+                element = await frame.worlds[IsolatedWorlds_js_1.PUPPETEER_WORLD].adoptHandle(elementOrFrame);
             }
-            const result = await frame.worlds[IsolatedWorld_js_1.PUPPETEER_WORLD]._waitForSelectorInPage(queryOne, element, selector, options);
+            const result = await frame.worlds[IsolatedWorlds_js_1.PUPPETEER_WORLD]._waitForSelectorInPage(queryOne, element, selector, options);
             if (element) {
                 await element.dispose();
             }
@@ -54,7 +54,7 @@ function createPuppeteerQueryHandler(handler) {
                 await result.dispose();
                 return null;
             }
-            return frame.worlds[IsolatedWorld_js_1.MAIN_WORLD].transferHandle(result);
+            return frame.worlds[IsolatedWorlds_js_1.MAIN_WORLD].transferHandle(result);
         };
     }
     if (handler.queryAll) {

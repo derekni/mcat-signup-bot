@@ -16,7 +16,7 @@
 import { ariaHandler } from './AriaQueryHandler.js';
 import { ElementHandle } from './ElementHandle.js';
 import { Frame } from './Frame.js';
-import { MAIN_WORLD, PUPPETEER_WORLD, } from './IsolatedWorld.js';
+import { MAIN_WORLD, PUPPETEER_WORLD } from './IsolatedWorlds.js';
 function createPuppeteerQueryHandler(handler) {
     const internalHandler = {};
     if (handler.queryOne) {

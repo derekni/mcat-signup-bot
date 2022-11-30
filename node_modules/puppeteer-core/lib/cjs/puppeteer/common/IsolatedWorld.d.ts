@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 import { Protocol } from 'devtools-protocol';
-import type PuppeteerUtil from '../injected/injected.js';
-import { ElementHandle } from './ElementHandle.js';
 import { ExecutionContext } from './ExecutionContext.js';
 import { Frame } from './Frame.js';
 import { MouseButton } from './Input.js';
@@ -23,6 +21,9 @@ import { JSHandle } from './JSHandle.js';
 import { PuppeteerLifeCycleEvent } from './LifecycleWatcher.js';
 import { EvaluateFunc, HandleFor, InnerLazyParams, NodeFor } from './types.js';
 import { TaskManager } from './WaitTask.js';
+import { MAIN_WORLD, PUPPETEER_WORLD } from './IsolatedWorlds.js';
+import type PuppeteerUtil from '../injected/injected.js';
+import type { ElementHandle } from './ElementHandle.js';
 /**
  * @public
  */
@@ -57,20 +58,6 @@ export interface PageBinding {
     name: string;
     pptrFunction: Function;
 }
-/**
- * A unique key for {@link IsolatedWorldChart} to denote the default world.
- * Execution contexts are automatically created in the default world.
- *
- * @internal
- */
-export declare const MAIN_WORLD: unique symbol;
-/**
- * A unique key for {@link IsolatedWorldChart} to denote the puppeteer world.
- * This world contains all puppeteer-internal bindings/code.
- *
- * @internal
- */
-export declare const PUPPETEER_WORLD: unique symbol;
 /**
  * @internal
  */

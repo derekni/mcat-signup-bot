@@ -1,3 +1,4 @@
 **/.DS_Store
 secrets.js
 *.pem
+*node_modules*
