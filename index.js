@@ -10,10 +10,14 @@ let browser = null;
 
 const login_url = "https://mcat.aamc.org/mrs/#/";
 const search_date = "Friday 24th of March 2023";
+const search_date2 = "Friday 25th of March 2023";
 
 const login = async () => {
   // launch new browser
-  browser = await puppeteer.launch({ headless: true, executablePath: '/usr/bin/chromium-browser' });
+  browser = await puppeteer.launch({
+    headless: false,
+    // executablePath: "/usr/bin/chromium-browser",
+  });
   page = await browser.newPage();
 
   // navigate to login, login
@@ -43,54 +47,56 @@ const login = async () => {
   );
   await timeout(2_500);
 
-  // type in address and date
+  // type in address
   await page.waitForSelector('input[name="testCentersNearAddress"]');
+  await timeout(1_500);
   await page.$eval(
     'input[name="testCentersNearAddress"]',
     (el, address) => (el.value = address),
     secrets.address
   );
-  await page.click('img[id="calendarIcon"]');
-  await page.evaluate((search_date) => {
-    Array.from(document.querySelectorAll("a"))
-      .find((el) => el.ariaLabel === search_date)
-      .click();
-  }, search_date);
-  await page.click('input[id="addressSearch"]');
-  await timeout(3_000);
+
   let numQueries = 0;
-  client.messages
-    .create({
-      body: "Began searching for mcat locations.",
-      from: secrets.twilio_number,
-      to: secrets.phone,
-    })
-    .then((message) => console.log(message.sid));
-  setInterval(async () => {
-    await page.click('input[id="addressSearch"]');
-    await timeout(3_000);
-    numQueries += 1;
-    const datesAvailable = await numberDatesAvailable();
-    console.log(`Dates available: ${datesAvailable}`);
-    console.log(`Number of queries: ${numQueries}`);
-    if (datesAvailable > 0) {
-      client.messages
-        .create({
-          body: `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`,
-          from: secrets.twilio_number,
-          to: secrets.phone,
-        })
-        .then((message) => console.log(message.sid));
-    } else if (numQueries % 6_000 == 0) {
-      client.messages
-        .create({
-          body: `Twilio has queried ${numQueries} times for MCAT dates.`,
-          from: secrets.twilio_number,
-          to: secrets.phone,
-        })
-        .then((message) => console.log(message.sid));
-    }
-  }, 15_000);
+  await checkWorking();
+
+  try {
+    // keep looping and selecting different dates
+    setInterval(async () => {
+      // search march 24
+      searchSpecificDate(search_date);
+      await timeout(3_000);
+      numQueries += 1;
+      const datesAvailable = await numberDatesAvailable();
+      // console.log(`Dates available: ${datesAvailable}`);
+      // console.log(`Number of queries: ${numQueries}`);
+      if (datesAvailable > 0) {
+        sendMessage(
+          `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
+        );
+      }
+
+      // search march 25
+      await timeout(12_000);
+      searchSpecificDate(search_date2);
+      await timeout(3_000);
+      numQueries += 1;
+      const datesAvailable2 = await numberDatesAvailable();
+      // console.log(`Dates available: ${datesAvailable2}`);
+      // console.log(`Number of queries: ${numQueries}`);
+      if (datesAvailable2 > 0) {
+        sendMessage(
+          `There are ${datesAvailable2} appointments available with search location ${secrets.address} and search date ${search_date}.`
+        );
+      }
+
+      // every 600 queries (~3 hours), do a test to ensure that it's working
+      if (numQueries % 600 === 0) {
+        await checkWorking();
+      }
+    }, 12_000);
+  } catch (e) {
+    console.log(`ended with ${numQueries} num queries`);
+  }
 };
 login();
 
@@ -99,11 +105,66 @@ const numberDatesAvailable = async () => {
     const available = Array.from(document.querySelectorAll("input")).filter(
       (el) => el.className === "btn_select"
     );
-    return available.length;
+    return available.length / 2;
   });
   return avail;
 };
 
 const timeout = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+const searchSpecificDate = async (date) => {
+  // fill in name
+  await page.waitForSelector('input[name="testCentersNearAddress"]');
+  await timeout(1_000);
+  await page.$eval(
+    'input[name="testCentersNearAddress"]',
+    (el, address) => (el.value = address),
+    secrets.address
+  );
+
+  // fill in date
+  await page.click('img[id="calendarIcon"]');
+  await page.evaluate((date) => {
+    Array.from(document.querySelectorAll("a"))
+      .find((el) => el.ariaLabel === date)
+      .click();
+  }, date);
+  await page.click('input[id="addressSearch"]');
+};
+
+// makes a query for texas, for march 24, sends a message
+const checkWorking = async () => {
+  // fill in address
+  await page.waitForSelector('input[name="testCentersNearAddress"]');
+  await timeout(1_500);
+  await page.$eval(
+    'input[name="testCentersNearAddress"]',
+    (el, address) => (el.value = address),
+    "Texas"
+  );
+
+  // fill in date
+  await page.click('img[id="calendarIcon"]');
+  await page.evaluate((date) => {
+    Array.from(document.querySelectorAll("a"))
+      .find((el) => el.ariaLabel === date)
+      .click();
+  }, search_date);
+  await page.click('input[id="addressSearch"]');
+
+  // send message with results
+  const available = await numberDatesAvailable();
+  sendMessage(
+    `Tested with input Texas and date ${search_date}, found ${available} test sites available`
+  );
+};
+
+const sendMessage = (msg) => {
+  client.messages.create({
+    body: msg,
+    from: secrets.twilio_number,
+    to: secrets.phone,
+  });
 };
