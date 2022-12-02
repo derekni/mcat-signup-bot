@@ -15,8 +15,8 @@ const search_date2 = "Friday 25th of March 2023";
 const login = async () => {
   // launch new browser
   browser = await puppeteer.launch({
-    headless: false,
-    // executablePath: "/usr/bin/chromium-browser",
+    headless: true,
+    executablePath: "/usr/bin/chromium-browser",
   });
   page = await browser.newPage();
 
