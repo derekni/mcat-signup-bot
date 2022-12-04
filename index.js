@@ -59,44 +59,40 @@ const login = async () => {
   let numQueries = 0;
   await checkWorking();
 
-  try {
-    // keep looping and selecting different dates
-    setInterval(async () => {
-      // search march 24
-      searchSpecificDate(search_date);
-      await timeout(3_000);
-      numQueries += 1;
-      const datesAvailable = await numberDatesAvailable();
-      // console.log(`Dates available: ${datesAvailable}`);
-      // console.log(`Number of queries: ${numQueries}`);
-      if (datesAvailable > 0) {
-        sendMessage(
-          `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
-        );
-      }
+  // keep looping and selecting different dates
+  setInterval(async () => {
+    // search march 24
+    searchSpecificDate(search_date);
+    await timeout(3_000);
+    numQueries += 1;
+    const datesAvailable = await numberDatesAvailable();
+    // console.log(`Dates available: ${datesAvailable}`);
+    // console.log(`Number of queries: ${numQueries}`);
+    if (datesAvailable > 0) {
+      sendMessage(
+        `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
+      );
+    }
 
-      // search march 25
-      await timeout(12_000);
-      searchSpecificDate(search_date2);
-      await timeout(3_000);
-      numQueries += 1;
-      const datesAvailable2 = await numberDatesAvailable();
-      // console.log(`Dates available: ${datesAvailable2}`);
-      // console.log(`Number of queries: ${numQueries}`);
-      if (datesAvailable2 > 0) {
-        sendMessage(
-          `There are ${datesAvailable2} appointments available with search location ${secrets.address} and search date ${search_date}.`
-        );
-      }
+    // search march 25
+    await timeout(12_000);
+    searchSpecificDate(search_date2);
+    await timeout(3_000);
+    numQueries += 1;
+    const datesAvailable2 = await numberDatesAvailable();
+    // console.log(`Dates available: ${datesAvailable2}`);
+    // console.log(`Number of queries: ${numQueries}`);
+    if (datesAvailable2 > 0) {
+      sendMessage(
+        `There are ${datesAvailable2} appointments available with search location ${secrets.address} and search date ${search_date}.`
+      );
+    }
 
-      // every 600 queries (~3 hours), do a test to ensure that it's working
-      if (numQueries % 600 === 0) {
-        await checkWorking();
-      }
-    }, 12_000);
-  } catch (e) {
-    console.log(`ended with ${numQueries} num queries`);
-  }
+    // every 600 queries (~3 hours), do a test to ensure that it's working
+    if (numQueries % 600 === 0) {
+      await checkWorking();
+    }
+  }, 12_000);
 };
 login();
 
