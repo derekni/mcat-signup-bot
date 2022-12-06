@@ -10,7 +10,9 @@ let browser = null;
 
 const login_url = "https://mcat.aamc.org/mrs/#/";
 const search_date = "Friday 24th of March 2023";
-const search_date2 = "Friday 25th of March 2023";
+const search_date2 = "Saturday 25th of March 2023";
+
+let numQueries = 0;
 
 const login = async () => {
   // launch new browser
@@ -48,51 +50,10 @@ const login = async () => {
   await timeout(2_500);
 
   // type in address
-  await page.waitForSelector('input[name="testCentersNearAddress"]');
-  await timeout(1_500);
-  await page.$eval(
-    'input[name="testCentersNearAddress"]',
-    (el, address) => (el.value = address),
-    secrets.address
-  );
-
-  let numQueries = 0;
   await checkWorking();
 
   // keep looping and selecting different dates
-  setInterval(async () => {
-    // search march 24
-    searchSpecificDate(search_date);
-    await timeout(3_000);
-    numQueries += 1;
-    const datesAvailable = await numberDatesAvailable();
-    // console.log(`Dates available: ${datesAvailable}`);
-    // console.log(`Number of queries: ${numQueries}`);
-    if (datesAvailable > 0) {
-      sendMessage(
-        `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
-      );
-    }
-
-    // search march 25
-    await timeout(12_000);
-    searchSpecificDate(search_date2);
-    await timeout(3_000);
-    numQueries += 1;
-    const datesAvailable2 = await numberDatesAvailable();
-    // console.log(`Dates available: ${datesAvailable2}`);
-    // console.log(`Number of queries: ${numQueries}`);
-    if (datesAvailable2 > 0) {
-      sendMessage(
-        `There are ${datesAvailable2} appointments available with search location ${secrets.address} and search date ${search_date}.`
-      );
-    }
-
-    // every 600 queries (~3 hours), do a test to ensure that it's working
-    if (numQueries % 600 === 0) {
-      await checkWorking();
-    }
-  }, 12_000);
+  await loopSearch(search_date);
 };
 login();
 
@@ -110,24 +71,63 @@ const timeout = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+const loopSearch = async (date) => {
+  // search march 24
+  console.log(`searching for date ${date}`);
+  numQueries += 1;
+  const datesAvailable = await searchSpecificDate(date);
+  console.log(`Dates available: ${datesAvailable}`);
+  console.log(`Number of queries: ${numQueries}`);
+  if (datesAvailable > 0) {
+    sendMessage(
+      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
+    );
+  }
+
+  // every 600 queries (~3 hours), do a test to ensure that it's working
+  if (numQueries % 600 === 0) {
+    await checkWorking();
+  }
+
+  // re-call this function in ten seconds
+  setTimeout(async () => {
+    if (date === search_date) {
+      await loopSearch(search_date2);
+    } else {
+      await loopSearch(search_date);
+    }
+  }, 10_000);
+};
+
 const searchSpecificDate = async (date) => {
-  // fill in name
+  // fill in address
   await page.waitForSelector('input[name="testCentersNearAddress"]');
-  await timeout(1_000);
+  await timeout(1_500);
   await page.$eval(
     'input[name="testCentersNearAddress"]',
     (el, address) => (el.value = address),
     secrets.address
   );
+  await timeout(500);
 
   // fill in date
   await page.click('img[id="calendarIcon"]');
-  await page.evaluate((date) => {
+  await timeout(500);
+  await page.evaluate((d) => {
     Array.from(document.querySelectorAll("a"))
-      .find((el) => el.ariaLabel === date)
+      .find((el) => el.ariaLabel === d)
       .click();
   }, date);
+  await timeout(500);
   await page.click('input[id="addressSearch"]');
+
+  await timeout(2_500);
+
+  const res = await numberDatesAvailable();
+  console.log(
+    `Tested with input ${secrets.address} and date ${date}, found ${res} test sites available`
+  );
+  return res;
 };
 
 // makes a query for texas, for march 24, sends a message
@@ -143,6 +143,7 @@ const checkWorking = async () => {
 
   // fill in date
   await page.click('img[id="calendarIcon"]');
+  await timeout(300);
   await page.evaluate((date) => {
     Array.from(document.querySelectorAll("a"))
       .find((el) => el.ariaLabel === date)
@@ -150,9 +151,14 @@ const checkWorking = async () => {
   }, search_date);
   await page.click('input[id="addressSearch"]');
 
+  await timeout(2_500);
+
   // send message with results
   const available = await numberDatesAvailable();
   sendMessage(
+    `Tested with input Texas and date ${search_date}, found ${available} test sites available, ${numQueries} total queries.`
+  );
+  console.log(
     `Tested with input Texas and date ${search_date}, found ${available} test sites available`
   );
 };
