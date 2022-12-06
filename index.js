@@ -14,7 +14,7 @@ const search_date2 = "Saturday 25th of March 2023";
 
 let numQueries = 0;
 
-const login = async () => {
+const search = async () => {
   // launch new browser
   browser = await puppeteer.launch({
     headless: true,
@@ -55,7 +55,7 @@ const login = async () => {
   // keep looping and selecting different dates
   await loopSearch(search_date);
 };
-login();
+search();
 
 const numberDatesAvailable = async () => {
   const avail = await page.evaluate(() => {
@@ -69,34 +69,6 @@ const numberDatesAvailable = async () => {
 
 const timeout = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
-const loopSearch = async (date) => {
-  // search march 24
-  console.log(`searching for date ${date}`);
-  numQueries += 1;
-  const datesAvailable = await searchSpecificDate(date);
-  console.log(`Dates available: ${datesAvailable}`);
-  console.log(`Number of queries: ${numQueries}`);
-  if (datesAvailable > 0) {
-    sendMessage(
-      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
-    );
-  }
-
-  // every 600 queries (~3 hours), do a test to ensure that it's working
-  if (numQueries % 600 === 0) {
-    await checkWorking();
-  }
-
-  // re-call this function in ten seconds
-  setTimeout(async () => {
-    if (date === search_date) {
-      await loopSearch(search_date2);
-    } else {
-      await loopSearch(search_date);
-    }
-  }, 10_000);
 };
 
 const searchSpecificDate = async (date) => {
@@ -169,4 +141,50 @@ const sendMessage = (msg) => {
     from: secrets.twilio_number,
     to: secrets.phone,
   });
+};
+
+const call = () => {
+  client.calls.create(
+    {
+      url: "http://demo.twilio.com/docs/voice.xml",
+      to: secrets.phone,
+      from: secrets.twilio_number,
+    },
+    function (err, call) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(call.sid);
+      }
+    }
+  );
+};
+
+const loopSearch = async (date) => {
+  // search march 24
+  console.log(`searching for date ${date}`);
+  numQueries += 1;
+  const datesAvailable = await searchSpecificDate(date);
+  console.log(`Dates available: ${datesAvailable}`);
+  console.log(`Number of queries: ${numQueries}`);
+  if (datesAvailable > 0) {
+    sendMessage(
+      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
+    );
+    call();
+  }
+
+  // every 600 queries (~3 hours), do a test to ensure that it's working
+  if (numQueries % 600 === 0) {
+    await checkWorking();
+  }
+
+  // re-call this function in ten seconds
+  setTimeout(async () => {
+    if (date === search_date) {
+      await loopSearch(search_date2);
+    } else {
+      await loopSearch(search_date);
+    }
+  }, 10_000);
 };
