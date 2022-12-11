@@ -96,9 +96,9 @@ const searchSpecificDate = async (date) => {
   await timeout(2_500);
 
   const res = await numberDatesAvailable();
-  console.log(
-    `Tested with input ${secrets.address} and date ${date}, found ${res} test sites available`
-  );
+  // console.log(
+  //   `Tested with input ${secrets.address} and date ${date}, found ${res} test sites available`
+  // );
   return res;
 };
 
@@ -130,9 +130,9 @@ const checkWorking = async () => {
   sendMessage(
     `Tested with input Texas and date ${search_date}, found ${available} test sites available, ${numQueries} total queries.`
   );
-  console.log(
-    `Tested with input Texas and date ${search_date}, found ${available} test sites available`
-  );
+  // console.log(
+  //   `Tested with input Texas and date ${search_date}, found ${available} test sites available`
+  // );
 };
 
 const sendMessage = (msg) => {
@@ -152,9 +152,9 @@ const call = () => {
     },
     function (err, call) {
       if (err) {
-        console.log(err);
+        // console.log(err);
       } else {
-        console.log(call.sid);
+        // console.log(call.sid);
       }
     }
   );
@@ -162,11 +162,11 @@ const call = () => {
 
 const loopSearch = async (date) => {
   // search march 24
-  console.log(`searching for date ${date}`);
+  // console.log(`searching for date ${date}`);
   numQueries += 1;
   const datesAvailable = await searchSpecificDate(date);
-  console.log(`Dates available: ${datesAvailable}`);
-  console.log(`Number of queries: ${numQueries}`);
+  // console.log(`Dates available: ${datesAvailable}`);
+  // console.log(`Number of queries: ${numQueries}`);
   if (datesAvailable > 0) {
     sendMessage(
       `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
