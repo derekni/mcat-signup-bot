@@ -58,6 +58,7 @@ const search = async () => {
 search();
 
 const numberDatesAvailable = async () => {
+  await page.waitForSelector("input");
   const avail = await page.evaluate(() => {
     const available = Array.from(document.querySelectorAll("input")).filter(
       (el) => el.className === "btn_select"
@@ -91,9 +92,10 @@ const searchSpecificDate = async (date) => {
       .click();
   }, date);
   await timeout(500);
-  await page.click('input[id="addressSearch"]');
-
-  await timeout(2_500);
+  await Promise.all([
+    page.click('input[id="addressSearch"]'),
+    page.waitForNavigation(),
+  ]);
 
   const res = await numberDatesAvailable();
   // console.log(
