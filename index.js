@@ -53,7 +53,7 @@ const search = async () => {
   await checkWorking();
 
   // keep looping and selecting different dates
-  await loopSearch(search_date);
+  await loopSearchOneDate(search_date2);
 };
 search();
 
@@ -98,13 +98,10 @@ const searchSpecificDate = async (date) => {
   ]);
 
   const res = await numberDatesAvailable();
-  // console.log(
-  //   `Tested with input ${secrets.address} and date ${date}, found ${res} test sites available`
-  // );
   return res;
 };
 
-// makes a query for texas, for march 24, sends a message
+// makes a query for march 24 and secrets address, sends a message
 const checkWorking = async () => {
   // fill in address
   await page.waitForSelector('input[name="testCentersNearAddress"]');
@@ -112,7 +109,7 @@ const checkWorking = async () => {
   await page.$eval(
     'input[name="testCentersNearAddress"]',
     (el, address) => (el.value = address),
-    "Texas"
+    secrets.address
   );
 
   // fill in date
@@ -128,13 +125,12 @@ const checkWorking = async () => {
   await timeout(2_500);
 
   // send message with results
-  const available = await numberDatesAvailable();
+  const available = checkSpecificCenter(0);
   sendMessage(
-    `Tested with input Texas and date ${search_date}, found ${available} test sites available, ${numQueries} total queries.`
+    `Tested with input ${secrets.address}, date ${search_date}, index 0. ${
+      available ? "Appointments are available." : "No appointments available."
+    }`
   );
-  // console.log(
-  //   `Tested with input Texas and date ${search_date}, found ${available} test sites available`
-  // );
 };
 
 const sendMessage = (msg) => {
@@ -146,38 +142,77 @@ const sendMessage = (msg) => {
 };
 
 const call = () => {
-  client.calls.create(
-    {
-      url: "http://demo.twilio.com/docs/voice.xml",
-      to: secrets.phone,
-      from: secrets.twilio_number,
-    },
-    function (err, call) {
-      if (err) {
-        // console.log(err);
-      } else {
-        // console.log(call.sid);
-      }
-    }
-  );
+  client.calls.create({
+    url: "http://demo.twilio.com/docs/voice.xml",
+    to: secrets.phone,
+    from: secrets.twilio_number,
+  });
 };
 
-const loopSearch = async (date) => {
-  // search march 24
-  // console.log(`searching for date ${date}`);
+// indices start at 0
+const checkSpecificCenter = (index) => {
+  const arr = Array.from(
+    document
+      .querySelector(`tr#testCenter_${index}`)
+      .querySelector("td.searchByDateApptCol")
+      .querySelectorAll("span")
+  ).slice(1);
+
+  for (let i = 0; i < arr.length; i++) {
+    const elt = arr[i];
+    if (elt.id.slice(0, 4) === "hour") {
+      return true;
+    }
+  }
+  return false;
+};
+
+// constantly searches for whatever search date is passed in
+const loopSearchOneDate = async (date) => {
   numQueries += 1;
-  const datesAvailable = await searchSpecificDate(date);
-  // console.log(`Dates available: ${datesAvailable}`);
-  // console.log(`Number of queries: ${numQueries}`);
-  if (datesAvailable > 0) {
+
+  // only check for index 0 and index 3
+  if (checkSpecificCenter(0)) {
     sendMessage(
-      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${search_date}.`
+      `There are appointments available at Brooklyn NY
+      with search location ${secrets.address} and search date ${date}.`
     );
     call();
   }
 
-  // every 600 queries (~3 hours), do a test to ensure that it's working
-  if (numQueries % 600 === 0) {
+  if (checkSpecificCenter(3)) {
+    sendMessage(
+      `There are appointments available at Staten Island NY
+      with search location ${secrets.address} and search date ${date}.`
+    );
+    call();
+  }
+
+  // every 750 queries (~3 hours), do a test to ensure that it's working
+  if (numQueries % 750 === 0) {
+    await checkWorking();
+  }
+
+  // re-call this function in ten seconds
+  setTimeout(async () => {
+    await loopSearch(date);
+  }, 10_000);
+};
+
+// loops between two search dates, search_date and search_date2
+const loopSearchTwoDates = async (date) => {
+  numQueries += 1;
+  const datesAvailable = await searchSpecificDate(date);
+
+  if (datesAvailable > 0) {
+    sendMessage(
+      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${date}.`
+    );
+    call();
+  }
+
+  // every 750 queries (~3 hours), do a test to ensure that it's working
+  if (numQueries % 750 === 0) {
     await checkWorking();
   }
 
