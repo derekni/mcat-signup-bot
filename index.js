@@ -109,7 +109,7 @@ const checkWorking = async () => {
   await page.$eval(
     'input[name="testCentersNearAddress"]',
     (el, address) => (el.value = address),
-    secrets.address
+    "minnesota"
   );
 
   // fill in date
@@ -127,7 +127,7 @@ const checkWorking = async () => {
   // send message with results
   const available = checkSpecificCenter(0);
   sendMessage(
-    `Tested with input ${secrets.address}, date ${search_date}, index 0. ${
+    `Tested with input minnesota, date ${search_date}, index 0. ${
       available ? "Appointments are available." : "No appointments available."
     }`
   );
