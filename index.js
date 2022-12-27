@@ -17,8 +17,8 @@ let numQueries = 0;
 const search = async () => {
   // launch new browser
   browser = await puppeteer.launch({
-    headless: true,
-    executablePath: "/usr/bin/chromium-browser",
+    headless: false,
+    // executablePath: "/usr/bin/chromium-browser",
   });
   page = await browser.newPage();
 
@@ -96,9 +96,6 @@ const searchSpecificDate = async (date) => {
     page.click('input[id="addressSearch"]'),
     page.waitForNavigation(),
   ]);
-
-  const res = await numberDatesAvailable();
-  return res;
 };
 
 // makes a query for march 24 and secrets address, sends a message
@@ -125,7 +122,7 @@ const checkWorking = async () => {
   await timeout(2_500);
 
   // send message with results
-  const available = checkSpecificCenter(0);
+  const available = await checkSpecificCenter(0);
   sendMessage(
     `Tested with input minnesota, date ${search_date}, index 0. ${
       available ? "Appointments are available." : "No appointments available."
@@ -150,29 +147,34 @@ const call = () => {
 };
 
 // indices start at 0
-const checkSpecificCenter = (index) => {
-  const arr = Array.from(
-    document
-      .querySelector(`tr#testCenter_${index}`)
-      .querySelector("td.searchByDateApptCol")
-      .querySelectorAll("span")
-  ).slice(1);
+const checkSpecificCenter = async (index) => {
+  const available = await page.evaluate((i) => {
+    const arr = Array.from(
+      document
+        .querySelector(`tr#testCenter_${i}`)
+        .querySelector("td.searchByDateApptCol")
+        .querySelectorAll("span")
+    ).slice(1);
 
-  for (let i = 0; i < arr.length; i++) {
-    const elt = arr[i];
-    if (elt.id.slice(0, 4) === "hour") {
-      return true;
+    for (let i = 0; i < arr.length; i++) {
+      const elt = arr[i];
+      if (elt.id.slice(0, 4) === "hour") {
+        return true;
+      }
     }
-  }
-  return false;
+    return false;
+  }, index);
+  return available;
 };
 
 // constantly searches for whatever search date is passed in
 const loopSearchOneDate = async (date) => {
+  await searchSpecificDate(date);
   numQueries += 1;
 
   // only check for index 0 and index 3
-  if (checkSpecificCenter(0)) {
+  const firstAvailable = await checkSpecificCenter(0);
+  if (firstAvailable) {
     sendMessage(
       `There are appointments available at Brooklyn NY
       with search location ${secrets.address} and search date ${date}.`
@@ -180,7 +182,8 @@ const loopSearchOneDate = async (date) => {
     call();
   }
 
-  if (checkSpecificCenter(3)) {
+  const fourthAvailable = await checkSpecificCenter(3);
+  if (fourthAvailable) {
     sendMessage(
       `There are appointments available at Staten Island NY
       with search location ${secrets.address} and search date ${date}.`
@@ -195,14 +198,15 @@ const loopSearchOneDate = async (date) => {
 
   // re-call this function in ten seconds
   setTimeout(async () => {
-    await loopSearch(date);
+    await loopSearchOneDate(date);
   }, 10_000);
 };
 
 // loops between two search dates, search_date and search_date2
 const loopSearchTwoDates = async (date) => {
   numQueries += 1;
-  const datesAvailable = await searchSpecificDate(date);
+  await searchSpecificDate(date);
+  const datesAvailable = await numberDatesAvailable();
 
   if (datesAvailable > 0) {
     sendMessage(
@@ -219,9 +223,9 @@ const loopSearchTwoDates = async (date) => {
   // re-call this function in ten seconds
   setTimeout(async () => {
     if (date === search_date) {
-      await loopSearch(search_date2);
+      await loopSearchTwoDates(search_date2);
     } else {
-      await loopSearch(search_date);
+      await loopSearchTwoDates(search_date);
     }
   }, 10_000);
 };
