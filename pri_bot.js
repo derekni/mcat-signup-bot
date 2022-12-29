@@ -17,8 +17,8 @@ let numQueries = 0;
 const search = async () => {
   // launch new browser
   browser = await puppeteer.launch({
-    headless: false,
-    // executablePath: "/usr/bin/chromium-browser",
+    headless: true,
+    executablePath: "/usr/bin/chromium-browser",
   });
   page = await browser.newPage();
 
