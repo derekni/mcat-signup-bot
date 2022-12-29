@@ -194,7 +194,7 @@ const loopSearchOneDate = async (date) => {
           secrets.p_address
         } and search date ${date}, at appointment center ${i + 1}`
       );
-      // callP();
+      callP();
     }
   }
 
