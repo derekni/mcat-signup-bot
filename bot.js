@@ -43,11 +43,11 @@ const search = async () => {
       .find((el) => el.textContent === "MCAT: Medical College Admission Test")
       .click();
   });
-  await timeout(2_500);
+  await timeout(3_000);
   await page.click(
     'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
   );
-  await timeout(2_500);
+  await timeout(3_000);
 
   // type in address
   await checkWorking();
