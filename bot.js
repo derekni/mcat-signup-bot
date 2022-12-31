@@ -39,6 +39,7 @@ class Bot {
       });
     }
     this.page = await this.browser.newPage();
+    console.log("opened new page");
 
     // navigate to login and login
     await this.page.goto(login_url);
@@ -46,14 +47,17 @@ class Bot {
       this.page.waitForSelector('input[name="IDToken1"]'),
       this.page.waitForSelector('input[name="IDToken2"]'),
       this.page.waitForSelector('button[id="login-btn"]'),
-      timeout(1_200),
+      timeout(2_000),
     ]);
     await this.page.type('input[name="IDToken1"]', secrets.username);
     await this.page.type('input[name="IDToken2"]', secrets.password);
     await this.page.click('button[id="login-btn"]');
+    console.log("clicked log in button");
     await this.page.waitForSelector(
-      "mat-card-actions button span.mat-button-wrapper"
+      "mat-card-actions button span.mat-button-wrapper",
+      { timeout: 10_000 }
     );
+    console.log("logged in");
 
     // go to mcat signup url, click through to schedule query
     await this.page.evaluate(() => {
@@ -66,7 +70,7 @@ class Bot {
         "a[title='MCAT: Medical College Admission Test']",
         { timeout: 10_000 }
       ),
-      timeout(1_200),
+      timeout(2_000),
     ]);
 
     // click mcat link
@@ -79,7 +83,7 @@ class Bot {
         'input[aria-label="Reschedule MCAT: Medical College Admission Test"]',
         { timeout: 10_000 }
       ),
-      timeout(1_200),
+      timeout(2_000),
     ]);
 
     // click reschedule
@@ -90,7 +94,7 @@ class Bot {
       this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       this.page.waitForSelector('img[id="calendarIcon"]'),
       this.page.waitForSelector('input[id="addressSearch"]'),
-      timeout(3_000),
+      timeout(3_500),
     ]);
 
     // keep looping and selecting different dates
@@ -115,16 +119,16 @@ class Bot {
     await this.page.click(`a[aria-label='${date}'`);
 
     // navigate
-    console.log("c'");
+    console.log("before the big promise.all");
     await this.page.click('input[id="addressSearch"]');
     await Promise.all([
       this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
       this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       this.page.waitForSelector('img[id="calendarIcon"]'),
       this.page.waitForSelector('input[id="addressSearch"]'),
-      timeout(3_000),
+      timeout(3_500),
     ]);
-    console.log("d'");
+    console.log("after the big promise.all");
   };
 
   /**
