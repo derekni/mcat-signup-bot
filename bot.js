@@ -93,9 +93,6 @@ class Bot {
       timeout(3_000),
     ]);
 
-    // type in address
-    await this.checkWorking(this.dates[0], this.centers[0]);
-
     // keep looping and selecting different dates
     await this.loopSearch(0);
   };
@@ -178,7 +175,6 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
-    counter += 1;
     for (const date of this.dates) {
       await this.searchSpecificDate(date);
       for (const center of this.centers) {
@@ -202,7 +198,7 @@ class Bot {
 
     // re-call this function in eight seconds
     setTimeout(() => {
-      this.loopSearch(counter);
+      this.loopSearch(counter + 1);
     }, 8_000);
   };
 }
