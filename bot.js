@@ -39,7 +39,7 @@ class Bot {
       });
     }
     this.page = await this.browser.newPage();
-    console.log("a");
+
     // navigate to login and login
     await this.page.goto(login_url);
     await Promise.all([
@@ -54,7 +54,7 @@ class Bot {
     await this.page.waitForSelector(
       "mat-card-actions button span.mat-button-wrapper"
     );
-    console.log("b");
+
     // go to mcat signup url, click through to schedule query
     await this.page.evaluate(() => {
       Array.from(document.querySelectorAll("span"))
@@ -68,7 +68,7 @@ class Bot {
       ),
       timeout(1_200),
     ]);
-    console.log("c");
+
     // click mcat link
     await this.page.$eval(
       "a[title='MCAT: Medical College Admission Test']",
@@ -81,7 +81,7 @@ class Bot {
       ),
       timeout(1_200),
     ]);
-    console.log("d");
+
     // click reschedule
     await this.page.click(
       'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
@@ -92,7 +92,7 @@ class Bot {
       this.page.waitForSelector('input[id="addressSearch"]'),
       timeout(3_000),
     ]);
-    console.log("e");
+
     // keep looping and selecting different dates
     await this.loopSearch(0);
   };
@@ -175,11 +175,13 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
-    console.log(counter);
+    console.log("a");
     for (const date of this.dates) {
       await this.searchSpecificDate(date);
+      console.log("b");
       for (const center of this.centers) {
         const isAvailable = await this.isSpecificCenterAvailable(center);
+        console.log("c");
         if (isAvailable) {
           for (const phone of this.phones) {
             sendMessage(
@@ -191,11 +193,13 @@ class Bot {
         }
       }
     }
+    console.log("d");
 
     // every 750 queries (~3 hours), do a test to ensure that it's working
     if (counter % 750 === 0) {
-      await this.checkWorking(this.dates[0]);
+      await this.checkWorking(this.dates[0], this.centers[0]);
     }
+    console.log("e");
 
     // re-call this function in eight seconds
     setTimeout(() => {
