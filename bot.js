@@ -5,227 +5,240 @@ const accountSid = secrets.TWILIO_ACCOUNT_SID;
 const authToken = secrets.TWILIO_AUTH_TOKEN;
 const client = require("twilio")(accountSid, authToken);
 
-let page = null;
-let browser = null;
-
 const login_url = "https://mcat.aamc.org/mrs/#/";
-const search_date = "Friday 24th of March 2023";
-const search_date2 = "Saturday 25th of March 2023";
 
-let numQueries = 0;
+class Bot {
+  /**
+   * Initialize a Bot with basic parameters for searching MCAT locations.
+   * @param {string} address address to query for.
+   * @param {string[]} dates dates to query for.
+   * @param {int[]} centers centers to query for.
+   * @param {string[]} phones phones to call / text.
+   */
+  constructor(address, dates, centers, phones) {
+    this.address = address;
+    this.dates = dates;
+    this.centers = centers;
+    this.phones = phones;
+    this.page = null;
+    this.browser = null;
+  }
 
-const search = async () => {
-  // launch new browser
-  browser = await puppeteer.launch({
-    headless: true,
-    executablePath: "/usr/bin/chromium-browser",
-  });
-  page = await browser.newPage();
+  /**
+   * Searches the MCAT website for specific locations and dates.
+   * @param {boolean} testing set to true if want to test on local computer.
+   */
+  search = async (testing = false) => {
+    // launch new browser
+    if (testing) {
+      this.browser = await puppeteer.launch({ headless: false });
+    } else {
+      this.browser = await puppeteer.launch({
+        headless: true,
+        executablePath: "/usr/bin/chromium-browser",
+      });
+    }
+    this.page = await this.browser.newPage();
 
-  // navigate to login, login
-  await page.goto(login_url);
-  await page.waitForSelector('input[name="IDToken1"]');
-  await timeout(1_500);
-  await page.type('input[name="IDToken1"]', secrets.username);
-  await page.type('input[name="IDToken2"]', secrets.password);
-  await page.click('button[id="login-btn"]');
-  await timeout(5_000);
-
-  // go to mcat signup url, click through to schedule query
-  await page.evaluate(() => {
-    Array.from(document.querySelectorAll("span"))
-      .find((el) => el.textContent === " Reschedule or Cancel Appointment ")
-      .click();
-  });
-  await timeout(4_500);
-  await page.evaluate(() => {
-    Array.from(document.querySelectorAll("a"))
-      .find((el) => el.textContent === "MCAT: Medical College Admission Test")
-      .click();
-  });
-  await timeout(3_000);
-  await page.click(
-    'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
-  );
-  await timeout(3_000);
-
-  // type in address
-  await checkWorking();
-
-  // keep looping and selecting different dates
-  await loopSearchOneDate(search_date2);
-};
-search();
-
-const numberDatesAvailable = async () => {
-  await page.waitForSelector("input");
-  const avail = await page.evaluate(() => {
-    const available = Array.from(document.querySelectorAll("input")).filter(
-      (el) => el.className === "btn_select"
+    // navigate to login and login
+    await this.page.goto(login_url);
+    await Promise.all([
+      this.page.waitForSelector('input[name="IDToken1"]'),
+      this.page.waitForSelector('input[name="IDToken2"]'),
+      this.page.waitForSelector('button[id="login-btn"]'),
+      timeout(1_200),
+    ]);
+    await this.page.type('input[name="IDToken1"]', secrets.username);
+    await this.page.type('input[name="IDToken2"]', secrets.password);
+    await this.page.click('button[id="login-btn"]');
+    await this.page.waitForSelector(
+      "mat-card-actions button span.mat-button-wrapper"
     );
-    return available.length / 2;
-  });
-  return avail;
-};
 
+    // go to mcat signup url, click through to schedule query
+    await this.page.evaluate(() => {
+      Array.from(document.querySelectorAll("span"))
+        .find((el) => el.textContent === " Reschedule or Cancel Appointment ")
+        .click();
+    });
+    await Promise.all([
+      this.page.waitForSelector(
+        "a[title='MCAT: Medical College Admission Test']",
+        { timeout: 10_000 }
+      ),
+      timeout(1_200),
+    ]);
+
+    // click mcat link
+    await this.page.$eval(
+      "a[title='MCAT: Medical College Admission Test']",
+      (e) => e.click()
+    );
+    await Promise.all([
+      this.page.waitForSelector(
+        'input[aria-label="Reschedule MCAT: Medical College Admission Test"]',
+        { timeout: 10_000 }
+      ),
+      timeout(1_200),
+    ]);
+
+    // click reschedule
+    await this.page.click(
+      'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
+    );
+    await Promise.all([
+      this.page.waitForSelector('input[name="testCentersNearAddress"]'),
+      this.page.waitForSelector('img[id="calendarIcon"]'),
+      this.page.waitForSelector('input[id="addressSearch"]'),
+      timeout(3_000),
+    ]);
+
+    // type in address
+    await this.checkWorking(this.dates[0], this.centers[0]);
+
+    // keep looping and selecting different dates
+    await this.loopSearch(0);
+  };
+
+  /**
+   * Fills in address and date, and searches for test centers.
+   * @param {string} date specific aria-label date to query for.
+   */
+  searchSpecificDate = async (date) => {
+    // fill in address
+    await this.page.$eval(
+      'input[name="testCentersNearAddress"]',
+      (el, address) => (el.value = address),
+      this.address
+    );
+
+    // fill in date
+    await this.page.click('img[id="calendarIcon"]');
+    await this.page.waitForSelector(`a[aria-label='${date}'`);
+    await this.page.click(`a[aria-label='${date}'`);
+
+    // navigate
+    await this.page.click('input[id="addressSearch"]');
+    await Promise.all([
+      this.page.waitForSelector(
+        `tbody tr[id='testCenter_0'] td.searchByDateApptCol span`
+      ),
+      this.page.waitForSelector('input[name="testCentersNearAddress"]'),
+      this.page.waitForSelector('img[id="calendarIcon"]'),
+      this.page.waitForSelector('input[id="addressSearch"]'),
+      timeout(3_000),
+    ]);
+  };
+
+  /**
+   * Makes a basic location/date query and sends a text with the results.
+   */
+  checkWorking = async (date, center) => {
+    await this.searchSpecificDate(date);
+    const available = await this.isSpecificCenterAvailable(center);
+    for (const phone of this.phones) {
+      sendMessage(
+        `Tested with address ${this.address}, date ${date}, center ${center}. ${
+          available
+            ? "Appointments are available."
+            : "No appointments available."
+        }`,
+        phone
+      );
+    }
+  };
+
+  /**
+   * Returns if a specific center has appointments available.
+   * @param {number} index Specific center of interest.
+   * @returns if the center with the specified index is available.
+   */
+  isSpecificCenterAvailable = async (index) => {
+    const isAvailable = await this.page.evaluate((i) => {
+      const arr = Array.from(
+        document.querySelectorAll(
+          `tr#testCenter_${i} td.searchByDateApptCol span`
+        )
+      ).slice(1);
+
+      for (let i = 0; i < arr.length; i++) {
+        const elt = arr[i];
+        if (elt.id.slice(0, 4) === "hour") {
+          return true;
+        }
+      }
+      return false;
+    }, index - 1);
+    return isAvailable;
+  };
+
+  /**
+   * Keeps searching for bot's location and dates, for centers.
+   * Texts and calls the bot's phone number if one is available.
+   * @param {int} counter How many times this loop has iterated.
+   */
+  loopSearch = async (counter) => {
+    counter += 1;
+    for (const date of this.dates) {
+      await this.searchSpecificDate(date);
+      for (const center of this.centers) {
+        const isAvailable = await this.isSpecificCenterAvailable(center);
+        if (isAvailable) {
+          for (const phone of this.phones) {
+            sendMessage(
+              `There are appointments available with search location ${this.location} and search date ${date}.`,
+              phone
+            );
+            call(phone);
+          }
+        }
+      }
+    }
+
+    // every 750 queries (~3 hours), do a test to ensure that it's working
+    if (counter % 750 === 0) {
+      await this.checkWorking();
+    }
+
+    // re-call this function in eight seconds
+    setTimeout(() => {
+      this.loopSearch(counter);
+    }, 8_000);
+  };
+}
+
+/**
+ * Creates a Promise with a specified resolve time.
+ * @param {int} ms how long the Promise should take to resolve.
+ * @returns A Promise that resolves in the specified ms
+ */
 const timeout = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-const searchSpecificDate = async (date) => {
-  // fill in address
-  await page.waitForSelector('input[name="testCentersNearAddress"]');
-  await timeout(1_500);
-  await page.$eval(
-    'input[name="testCentersNearAddress"]',
-    (el, address) => (el.value = address),
-    secrets.address
-  );
-  await timeout(500);
-
-  // fill in date
-  await page.click('img[id="calendarIcon"]');
-  await timeout(500);
-  await page.evaluate((d) => {
-    Array.from(document.querySelectorAll("a"))
-      .find((el) => el.ariaLabel === d)
-      .click();
-  }, date);
-  await timeout(500);
-  await Promise.all([
-    page.click('input[id="addressSearch"]'),
-    page.waitForNavigation(),
-  ]);
-};
-
-// makes a query for march 24 and secrets address, sends a message
-const checkWorking = async () => {
-  // fill in address
-  await page.waitForSelector('input[name="testCentersNearAddress"]');
-  await timeout(1_500);
-  await page.$eval(
-    'input[name="testCentersNearAddress"]',
-    (el, address) => (el.value = address),
-    "minnesota"
-  );
-
-  // fill in date
-  await page.click('img[id="calendarIcon"]');
-  await timeout(300);
-  await page.evaluate((date) => {
-    Array.from(document.querySelectorAll("a"))
-      .find((el) => el.ariaLabel === date)
-      .click();
-  }, search_date);
-  await page.click('input[id="addressSearch"]');
-
-  await timeout(2_500);
-
-  // send message with results
-  const available = await checkSpecificCenter(0);
-  sendMessage(
-    `Tested with input minnesota, date ${search_date}, index 0. ${
-      available ? "Appointments are available." : "No appointments available."
-    }`
-  );
-};
-
-const sendMessage = (msg) => {
+/**
+ * Sends a specified message to a specified phone number.
+ * @param {string} msg Message to be texted.
+ * @param {string} number Phone number for text to be sent to.
+ */
+const sendMessage = (msg, number) => {
   client.messages.create({
     body: msg,
     from: secrets.twilio_number,
-    to: secrets.phone,
+    to: number,
   });
 };
 
-const call = () => {
+/**
+ * Calls a specified phone number.
+ * @param {string} number Phone number to be called.
+ */
+const call = (number) => {
   client.calls.create({
     url: "http://demo.twilio.com/docs/voice.xml",
-    to: secrets.phone,
     from: secrets.twilio_number,
+    to: number,
   });
 };
 
-// indices start at 0
-const checkSpecificCenter = async (index) => {
-  const available = await page.evaluate((i) => {
-    const arr = Array.from(
-      document
-        .querySelector(`tr#testCenter_${i}`)
-        .querySelector("td.searchByDateApptCol")
-        .querySelectorAll("span")
-    ).slice(1);
-
-    for (let i = 0; i < arr.length; i++) {
-      const elt = arr[i];
-      if (elt.id.slice(0, 4) === "hour") {
-        return true;
-      }
-    }
-    return false;
-  }, index);
-  return available;
-};
-
-// constantly searches for whatever search date is passed in
-const loopSearchOneDate = async (date) => {
-  await searchSpecificDate(date);
-  numQueries += 1;
-
-  // only check for index 0 and index 3
-  const firstAvailable = await checkSpecificCenter(0);
-  if (firstAvailable) {
-    sendMessage(
-      `There are appointments available at Brooklyn NY
-      with search location ${secrets.address} and search date ${date}.`
-    );
-    call();
-  }
-
-  const fourthAvailable = await checkSpecificCenter(3);
-  if (fourthAvailable) {
-    sendMessage(
-      `There are appointments available at Staten Island NY
-      with search location ${secrets.address} and search date ${date}.`
-    );
-    call();
-  }
-
-  // every 750 queries (~3 hours), do a test to ensure that it's working
-  if (numQueries % 750 === 0) {
-    await checkWorking();
-  }
-
-  // re-call this function in ten seconds
-  setTimeout(async () => {
-    await loopSearchOneDate(date);
-  }, 10_000);
-};
-
-// loops between two search dates, search_date and search_date2
-const loopSearchTwoDates = async (date) => {
-  numQueries += 1;
-  await searchSpecificDate(date);
-  const datesAvailable = await numberDatesAvailable();
-
-  if (datesAvailable > 0) {
-    sendMessage(
-      `There are ${datesAvailable} appointments available with search location ${secrets.address} and search date ${date}.`
-    );
-    call();
-  }
-
-  // every 750 queries (~3 hours), do a test to ensure that it's working
-  if (numQueries % 750 === 0) {
-    await checkWorking();
-  }
-
-  // re-call this function in ten seconds
-  setTimeout(async () => {
-    if (date === search_date) {
-      await loopSearchTwoDates(search_date2);
-    } else {
-      await loopSearchTwoDates(search_date);
-    }
-  }, 10_000);
-};
+module.exports = Bot;
