@@ -39,7 +39,6 @@ class Bot {
       });
     }
     this.page = await this.browser.newPage();
-    console.log("opened new page");
 
     // navigate to login and login
     await this.page.goto(login_url);
@@ -52,12 +51,10 @@ class Bot {
     await this.page.type('input[name="IDToken1"]', secrets.username);
     await this.page.type('input[name="IDToken2"]', secrets.password);
     await this.page.click('button[id="login-btn"]');
-    console.log("clicked log in button");
     await this.page.waitForSelector(
       "mat-card-actions button span.mat-button-wrapper",
       { timeout: 10_000 }
     );
-    console.log("logged in");
 
     // go to mcat signup url, click through to schedule query
     await this.page.evaluate(() => {
@@ -119,7 +116,6 @@ class Bot {
     await this.page.click(`a[aria-label='${date}'`);
 
     // navigate
-    console.log("before the big promise.all");
     await this.page.click('input[id="addressSearch"]');
     await Promise.all([
       // this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
@@ -128,7 +124,6 @@ class Bot {
       // this.page.waitForSelector('input[id="addressSearch"]'),
       timeout(3_500),
     ]);
-    console.log("after the big promise.all");
   };
 
   /**
