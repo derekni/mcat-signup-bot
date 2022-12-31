@@ -193,7 +193,7 @@ class Bot {
 
     // every 750 queries (~3 hours), do a test to ensure that it's working
     if (counter % 750 === 0) {
-      await this.checkWorking();
+      await this.checkWorking(this.dates[0]);
     }
 
     // re-call this function in eight seconds
