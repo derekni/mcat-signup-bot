@@ -119,9 +119,9 @@ class Bot {
     await this.page.click('input[id="addressSearch"]');
     await Promise.all([
       // this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
-      // this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       // this.page.waitForSelector('img[id="calendarIcon"]'),
       // this.page.waitForSelector('input[id="addressSearch"]'),
+      this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       timeout(3_500),
     ]);
   };
