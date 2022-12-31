@@ -103,7 +103,6 @@ class Bot {
    */
   searchSpecificDate = async (date) => {
     // fill in address
-    console.log("a'");
     await this.page.$eval(
       'input[name="testCentersNearAddress"]',
       (el, address) => (el.value = address),
@@ -111,7 +110,6 @@ class Bot {
     );
 
     // fill in date
-    console.log("b'");
     await this.page.click('img[id="calendarIcon"]');
     await this.page.waitForSelector(`a[aria-label='${date}'`);
     await this.page.click(`a[aria-label='${date}'`);
@@ -120,9 +118,7 @@ class Bot {
     console.log("c'");
     await this.page.click('input[id="addressSearch"]');
     await Promise.all([
-      this.page.waitForSelector(
-        `tbody tr[id='testCenter_0'] td.searchByDateApptCol span`
-      ),
+      this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
       this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       this.page.waitForSelector('img[id="calendarIcon"]'),
       this.page.waitForSelector('input[id="addressSearch"]'),
@@ -135,11 +131,8 @@ class Bot {
    * Makes a basic location/date query and sends a text with the results.
    */
   checkWorking = async (date, center) => {
-    console.log("ha");
     await this.searchSpecificDate(date);
-    console.log("hb");
     const available = await this.isSpecificCenterAvailable(center);
-    console.log("hc");
     for (const phone of this.phones) {
       sendMessage(
         `Tested with address ${this.address}, date ${date}, center ${center}. ${
@@ -150,7 +143,6 @@ class Bot {
         phone
       );
     }
-    console.log("hd");
   };
 
   /**
@@ -159,7 +151,6 @@ class Bot {
    * @returns if the center with the specified index is available.
    */
   isSpecificCenterAvailable = async (index) => {
-    console.log("x");
     const isAvailable = await this.page.evaluate((i) => {
       const arr = Array.from(
         document.querySelectorAll(
@@ -175,7 +166,6 @@ class Bot {
       }
       return false;
     }, index - 1);
-    console.log("y");
     return isAvailable;
   };
 
@@ -185,13 +175,10 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
-    console.log("a");
     for (const date of this.dates) {
       await this.searchSpecificDate(date);
-      console.log("b");
       for (const center of this.centers) {
         const isAvailable = await this.isSpecificCenterAvailable(center);
-        console.log("c");
         if (isAvailable) {
           for (const phone of this.phones) {
             sendMessage(
@@ -203,13 +190,11 @@ class Bot {
         }
       }
     }
-    console.log("d");
 
     // every 750 queries (~3 hours), do a test to ensure that it's working
     if (counter % 750 === 0) {
       await this.checkWorking(this.dates[0], this.centers[0]);
     }
-    console.log("e");
 
     // re-call this function in eight seconds
     setTimeout(() => {
