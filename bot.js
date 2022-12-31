@@ -103,6 +103,7 @@ class Bot {
    */
   searchSpecificDate = async (date) => {
     // fill in address
+    console.log("a'");
     await this.page.$eval(
       'input[name="testCentersNearAddress"]',
       (el, address) => (el.value = address),
@@ -110,11 +111,13 @@ class Bot {
     );
 
     // fill in date
+    console.log("b'");
     await this.page.click('img[id="calendarIcon"]');
     await this.page.waitForSelector(`a[aria-label='${date}'`);
     await this.page.click(`a[aria-label='${date}'`);
 
     // navigate
+    console.log("c'");
     await this.page.click('input[id="addressSearch"]');
     await Promise.all([
       this.page.waitForSelector(
@@ -125,14 +128,18 @@ class Bot {
       this.page.waitForSelector('input[id="addressSearch"]'),
       timeout(3_000),
     ]);
+    console.log("d'");
   };
 
   /**
    * Makes a basic location/date query and sends a text with the results.
    */
   checkWorking = async (date, center) => {
+    console.log("ha");
     await this.searchSpecificDate(date);
+    console.log("hb");
     const available = await this.isSpecificCenterAvailable(center);
+    console.log("hc");
     for (const phone of this.phones) {
       sendMessage(
         `Tested with address ${this.address}, date ${date}, center ${center}. ${
@@ -143,6 +150,7 @@ class Bot {
         phone
       );
     }
+    console.log("hd");
   };
 
   /**
@@ -151,6 +159,7 @@ class Bot {
    * @returns if the center with the specified index is available.
    */
   isSpecificCenterAvailable = async (index) => {
+    console.log("x");
     const isAvailable = await this.page.evaluate((i) => {
       const arr = Array.from(
         document.querySelectorAll(
@@ -166,6 +175,7 @@ class Bot {
       }
       return false;
     }, index - 1);
+    console.log("y");
     return isAvailable;
   };
 
