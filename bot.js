@@ -41,7 +41,7 @@ class Bot {
     this.page = await this.browser.newPage();
 
     // navigate to login and login
-    await this.page.goto(login_url);
+    await this.page.goto(login_url, { timeout: 10_000 });
     await Promise.all([
       this.page.waitForSelector('input[name="IDToken1"]'),
       this.page.waitForSelector('input[name="IDToken2"]'),
@@ -117,13 +117,13 @@ class Bot {
 
     // navigate
     await this.page.click('input[id="addressSearch"]');
-    await Promise.all([
-      // this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
-      // this.page.waitForSelector('img[id="calendarIcon"]'),
-      // this.page.waitForSelector('input[id="addressSearch"]'),
-      // this.page.waitForSelector('input[name="testCentersNearAddress"]'),
-      timeout(5_000),
-    ]);
+    // await Promise.all([
+    // this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
+    // this.page.waitForSelector('img[id="calendarIcon"]'),
+    // this.page.waitForSelector('input[id="addressSearch"]'),
+    // this.page.waitForSelector('input[name="testCentersNearAddress"]'),
+    // ]);
+    await timeout(7_500);
   };
 
   /**
@@ -195,10 +195,10 @@ class Bot {
       await this.checkWorking(this.dates[0], this.centers[0]);
     }
 
-    // re-call this function in eight seconds
+    // re-call this function in five seconds
     setTimeout(() => {
       this.loopSearch(counter + 1);
-    }, 8_000);
+    }, 5_000);
   };
 }
 
