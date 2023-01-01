@@ -116,14 +116,18 @@ class Bot {
     await this.page.click(`a[aria-label='${date}'`);
 
     // navigate
-    await this.page.click('input[id="addressSearch"]');
-    // await Promise.all([
-    // this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
-    // this.page.waitForSelector('img[id="calendarIcon"]'),
-    // this.page.waitForSelector('input[id="addressSearch"]'),
-    // this.page.waitForSelector('input[name="testCentersNearAddress"]'),
-    // ]);
-    await timeout(7_500);
+    await Promise.all([
+      this.page.click('input[id="addressSearch"]'),
+      page.waitForNavigation(),
+    ]);
+
+    await Promise.all([
+      this.page.waitForSelector(`tbody tr td.searchByDateApptCol span`),
+      this.page.waitForSelector('img[id="calendarIcon"]'),
+      this.page.waitForSelector('input[id="addressSearch"]'),
+      this.page.waitForSelector('input[name="testCentersNearAddress"]'),
+    ]);
+    // await timeout(7_500);
   };
 
   /**
