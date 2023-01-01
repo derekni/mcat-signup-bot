@@ -41,7 +41,7 @@ class Bot {
     this.page = await this.browser.newPage();
 
     // navigate to login and login
-    await this.page.goto(login_url, { timeout: 10_000 });
+    await this.page.goto(login_url);
     await Promise.all([
       this.page.waitForSelector('input[name="IDToken1"]'),
       this.page.waitForSelector('input[name="IDToken2"]'),
