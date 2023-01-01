@@ -50,7 +50,10 @@ class Bot {
     ]);
     await this.page.type('input[name="IDToken1"]', secrets.username);
     await this.page.type('input[name="IDToken2"]', secrets.password);
-    await this.page.click('button[id="login-btn"]');
+    await Promise.all([
+      this.page.click('button[id="login-btn"]'),
+      this.page.waitForNavigation(),
+    ]);
     await this.page.waitForSelector(
       "mat-card-actions button span.mat-button-wrapper",
       { timeout: 10_000 }
