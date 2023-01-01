@@ -118,7 +118,7 @@ class Bot {
     // navigate
     await Promise.all([
       this.page.click('input[id="addressSearch"]'),
-      page.waitForNavigation(),
+      this.page.waitForNavigation(),
     ]);
 
     await Promise.all([
