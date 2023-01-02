@@ -35,7 +35,7 @@ class Bot {
     } else {
       this.browser = await puppeteer.launch({
         headless: true,
-        executablePath: "/usr/bin/chromium-browser",
+        executablePath: "/snap/bin/chromium",
       });
     }
     this.page = await this.browser.newPage();
@@ -188,7 +188,7 @@ class Bot {
         if (isAvailable) {
           for (const phone of this.phones) {
             sendMessage(
-              `There are appointments available with search location ${this.location} and search date ${date}.`,
+              `There are appointments available with search location ${this.address} and search date ${date}.`,
               phone
             );
             call(phone);
