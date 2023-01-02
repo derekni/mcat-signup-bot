@@ -188,7 +188,7 @@ class Bot {
         if (isAvailable) {
           for (const phone of this.phones) {
             sendMessage(
-              `There are appointments available with search location ${this.address} and search date ${date}.`,
+              `There are appointments available with search location ${this.address} and search date ${date} for test center ${center}.`,
               phone
             );
             call(phone);
