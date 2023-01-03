@@ -26,7 +26,7 @@ class Bot {
 
   /**
    * Searches the MCAT website for specific locations and dates.
-   * @param {boolean} testing set to true if want to test on local computer.
+   * @param {boolean} testing set to true if want to test on local computer, false if on EC2.
    */
   search = async (testing = false) => {
     // launch new browser
@@ -34,12 +34,11 @@ class Bot {
       this.browser = await puppeteer.launch({ headless: false });
     } else {
       this.browser = await puppeteer.launch({
-        headless: true,
         executablePath: "/snap/bin/chromium",
+        args: ["--proxy-server='direct://'", "--proxy-bypass-list=*"],
       });
     }
     this.page = await this.browser.newPage();
-
     // navigate to login and login
     await this.page.goto(login_url);
     await Promise.all([
@@ -55,8 +54,7 @@ class Bot {
       this.page.waitForNavigation(),
     ]);
     await this.page.waitForSelector(
-      "mat-card-actions button span.mat-button-wrapper",
-      { timeout: 10_000 }
+      "mat-card-actions button span.mat-button-wrapper"
     );
 
     // go to mcat signup url, click through to schedule query
