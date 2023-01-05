@@ -7,21 +7,16 @@ const client = require("twilio")(accountSid, authToken);
 
 const login_url = "https://mcat.aamc.org/mrs/#/";
 
+/**
+ * Bot that takes in queries to search for and keeps searching for availabilities.
+ */
 class Bot {
   /**
    * Initialize a Bot with basic parameters for searching MCAT locations.
-   * @param {string} address address to query for.
-   * @param {string[]} dates dates to query for.
-   * @param {int[]} centers centers to query for.
-   * @param {string[]} phones phones to call / text.
+   * @param {Query[]} queries queries to search for.
    */
-  constructor(address, dates, centers, phones) {
-    this.address = address;
-    this.dates = dates;
-    this.centers = centers;
-    this.phones = phones;
-    this.page = null;
-    this.browser = null;
+  constructor(queries) {
+    this.queries = queries;
   }
 
   /**
@@ -65,8 +60,7 @@ class Bot {
     });
     await Promise.all([
       this.page.waitForSelector(
-        "a[title='MCAT: Medical College Admission Test']",
-        { timeout: 10_000 }
+        "a[title='MCAT: Medical College Admission Test']"
       ),
       timeout(2_000),
     ]);
@@ -78,8 +72,7 @@ class Bot {
     );
     await Promise.all([
       this.page.waitForSelector(
-        'input[aria-label="Reschedule MCAT: Medical College Admission Test"]',
-        { timeout: 10_000 }
+        'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
       ),
       timeout(2_000),
     ]);
@@ -101,20 +94,20 @@ class Bot {
 
   /**
    * Fills in address and date, and searches for test centers.
-   * @param {string} date specific aria-label date to query for.
+   * @param {Query} query specific query to search.
    */
-  searchSpecificDate = async (date) => {
+  searchSpecificQuery = async (query) => {
     // fill in address
     await this.page.$eval(
       'input[name="testCentersNearAddress"]',
       (el, address) => (el.value = address),
-      this.address
+      query.address
     );
 
     // fill in date
     await this.page.click('img[id="calendarIcon"]');
-    await this.page.waitForSelector(`a[aria-label='${date}'`);
-    await this.page.click(`a[aria-label='${date}'`);
+    await this.page.waitForSelector(`a[aria-label='${query.date}'`);
+    await this.page.click(`a[aria-label='${query.date}'`);
 
     // navigate
     await Promise.all([
@@ -134,12 +127,14 @@ class Bot {
   /**
    * Makes a basic location/date query and sends a text with the results.
    */
-  checkWorking = async (date, center) => {
-    await this.searchSpecificDate(date);
-    const available = await this.isSpecificCenterAvailable(center);
-    for (const phone of this.phones) {
+  checkWorking = async (query) => {
+    await this.searchSpecificQuery(query);
+    const available = await this.isSpecificCenterAvailable(query.centers[0]);
+    for (const phone of query.phones) {
       sendMessage(
-        `Tested with address ${this.address}, date ${date}, center ${center}. ${
+        `Tested with address ${query.address}, date ${query.date}, center ${
+          query.centers[0]
+        }. ${
           available
             ? "Appointments are available."
             : "No appointments available."
@@ -179,14 +174,14 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
-    for (const date of this.dates) {
-      await this.searchSpecificDate(date);
-      for (const center of this.centers) {
+    for (const query of this.queries) {
+      await this.searchSpecificQuery(query);
+      for (const center of query.centers) {
         const isAvailable = await this.isSpecificCenterAvailable(center);
         if (isAvailable) {
-          for (const phone of this.phones) {
+          for (const phone of query.phones) {
             sendMessage(
-              `There are appointments available with search location ${this.address} and search date ${date} for test center ${center}.`,
+              `There are appointments available with search location ${query.address} and search date ${query.date} for test center ${center}.`,
               phone
             );
             call(phone);
@@ -195,9 +190,9 @@ class Bot {
       }
     }
 
-    // every 750 queries (~3 hours), do a test to ensure that it's working
-    if (counter % 750 === 0) {
-      await this.checkWorking(this.dates[0], this.centers[0]);
+    // every 1000 loops, do a test to ensure that it's working
+    if (counter % 1000 === 0) {
+      await this.checkWorking(this.queries[0]);
     }
 
     // re-call this function in five seconds
