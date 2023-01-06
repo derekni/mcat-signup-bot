@@ -34,6 +34,12 @@ class Bot {
       });
     }
     this.page = await this.browser.newPage();
+
+    // if on EC2 instance, give more wiggle room w/ timeout
+    if (!testing) {
+      this.page.setDefaultTimeout(60_000);
+    }
+
     // navigate to login and login
     await this.page.goto(login_url);
     await Promise.all([
