@@ -1,7 +1,7 @@
 {
-  "name": "js-bot-tutorial",
+  "name": "mcat-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Bot to check for MCAT signups, integrated with Twilio.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
