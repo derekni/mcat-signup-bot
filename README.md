@@ -46,23 +46,36 @@ You can also run this bot on an EC2 instance, which will allow the bot to contin
 ##### Installing node and running the bot
 
 - Install node:
-'''
+```
 $ sudo apt-get update
-$ sudo apt-get install nodejs
-$ sudo apt-get install npm
-$ sudo ln -s `which nodejs` /usr/bin/node
-'''
+$ curl -fsSL https://deb.nodesource.com/setup_19.x | sudo -E bash - &&\
+  sudo apt-get install -y nodejs
+```
+- The terminal may need to restart, and may ask you to select services to restart. Use arrow keys and spacebar to select all, and hit 'enter' to restart the terminal.
+- Verify node and npm are installed by running `node -v` and `npm -v`, which should print their version numbers
 - Install the node packages from `package.json`:
-'''
+```
 $ npm install
-'''
+```
 - Install Chromium, which is needed for Puppeteer to run and create a browser page
-'''
-$ npm install chromium -g
-'''
+```
+$ sudo snap install chromium
+```
 - Install the node module "forever", which will allow you to keep the process running after you've logged out of your EC2 instance
-'''
+```
 $ sudo npm install forever -g
-'''
+```
 - Run the bot by calling `forever start run_bot.js`
-- Clear runs by calling `forever stopall` and check existing runs by calling `forever list`
+- Update the forever script and check existing runs by using the following forever commands:
+```
+$ forever stopall
+$ forever list
+$ forever stop run_bot.js
+$ forever restart run_bot.js
+```
+  
+##### Notes
+  
+MCAT test centers take a while to open up, be patient! It took a while for me to get the ones that I was looking for. I would recommend saving the Twilio number as a contact (and adding it as a favorite) so you won't miss calls, and to always be ready to sign up. Spots don't fill up that quickly (the official MCAT notification system seems to check every hour at most, so most people won't be able to see the openings).
+  
+Special thanks to Daniel Shiffman, with a great tutorial on deploying a Twitter bot to an EC2 instance (https://shiffman.net/a2z/bot-ec2/).
