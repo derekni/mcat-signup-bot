@@ -31,13 +31,14 @@ class Bot {
       this.browser = await puppeteer.launch({
         executablePath: "/snap/bin/chromium",
         args: ["--proxy-server='direct://'", "--proxy-bypass-list=*"],
+        timeout: 120_000,
       });
     }
     this.page = await this.browser.newPage();
 
     // if on EC2 instance, give more wiggle room w/ timeout
     if (!testing) {
-      this.page.setDefaultTimeout(60_000);
+      this.page.setDefaultTimeout(120_000);
     }
 
     // navigate to login and login
@@ -127,7 +128,6 @@ class Bot {
       this.page.waitForSelector('input[id="addressSearch"]'),
       this.page.waitForSelector('input[name="testCentersNearAddress"]'),
     ]);
-    // await timeout(7_500);
   };
 
   /**
@@ -196,15 +196,15 @@ class Bot {
       }
     }
 
-    // every 1000 loops, do a test to ensure that it's working
-    if (counter % 1000 === 0) {
+    // every 8_000 loops (~2 days), do a test to ensure that it's working
+    if (counter % 8_000 === 0) {
       await this.checkWorking(this.queries[0]);
     }
 
-    // re-call this function in five seconds
+    // re-call this function in two seconds
     setTimeout(() => {
       this.loopSearch(counter + 1);
-    }, 5_000);
+    }, 2_000);
   };
 }
 
