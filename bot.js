@@ -17,13 +17,18 @@ class Bot {
    */
   constructor(queries) {
     this.queries = queries;
+    this.months = ["April", "May", "June", "July", "August", "September"];
+    this.masterPhone = secrets.phone;
   }
 
   /**
-   * Searches the MCAT website for specific locations and dates.
+   * Log in and search the MCAT website for specific locations and dates.
    * @param {boolean} testing set to true if want to test on local computer, false if on EC2.
    */
   search = async (testing = false) => {
+    // send a text message to master phone to notify bot is started
+    sendText("MCAT Bot has started running.", this.masterPhone);
+
     // launch new browser
     if (testing) {
       this.browser = await puppeteer.launch({ headless: false });
@@ -62,32 +67,18 @@ class Bot {
     // go to mcat signup url, click through to schedule query
     await this.page.evaluate(() => {
       Array.from(document.querySelectorAll("span"))
-        .find((el) => el.textContent === " Reschedule or Cancel Appointment ")
+        .find((el) => el.textContent === "Schedule an Exam")
         .click();
     });
     await Promise.all([
-      this.page.waitForSelector(
-        "a[title='MCAT: Medical College Admission Test']"
-      ),
+      this.page.waitForSelector("input[id='nextButton']"),
       timeout(2_000),
     ]);
-
-    // click mcat link
-    await this.page.$eval(
-      "a[title='MCAT: Medical College Admission Test']",
-      (e) => e.click()
-    );
-    await Promise.all([
-      this.page.waitForSelector(
-        'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
-      ),
-      timeout(2_000),
-    ]);
-
-    // click reschedule
-    await this.page.click(
-      'input[aria-label="Reschedule MCAT: Medical College Admission Test"]'
-    );
+    await this.page.evaluate(() => {
+      Array.from(document.querySelectorAll("input"))
+        .find((el) => el.id === "nextButton")
+        .click();
+    });
     await Promise.all([
       this.page.waitForSelector('input[name="testCentersNearAddress"]'),
       this.page.waitForSelector('img[id="calendarIcon"]'),
@@ -112,13 +103,11 @@ class Bot {
     );
 
     // fill in date
-    await this.page.click('img[id="calendarIcon"]');
-    await this.page.waitForSelector(`a[aria-label='${query.date}'`);
-    await this.page.click(`a[aria-label='${query.date}'`);
+    await this.fillInDate(query);
 
     // navigate
     await Promise.all([
-      this.page.click('input[id="addressSearch"]'),
+      this.page.click("input#addressSearch"),
       this.page.waitForNavigation(),
     ]);
 
@@ -130,14 +119,43 @@ class Bot {
     ]);
   };
 
+  fillInDate = async (query) => {
+    await this.page.click('img[id="calendarIcon"]');
+    await this.page.waitForSelector("span.ui-datepicker-month");
+    const targetMonthInd = this.months.indexOf(query.month);
+    const monthElt = await this.page.$("span.ui-datepicker-month");
+    const currMonth = await monthElt.evaluate((el) => el.textContent);
+    let currMonthInd = this.months.indexOf(currMonth);
+
+    while (currMonthInd < targetMonthInd) {
+      // select next month button
+      await this.page.click("a.ui-datepicker-next.ui-corner-all");
+      await timeout(1_000);
+      currMonthInd += 1;
+    }
+
+    await this.page.$$eval(
+      "a.ui-state-default",
+      (elts, day) => {
+        for (const elt of elts) {
+          if (elt.textContent === " " + day) {
+            elt.click();
+            break;
+          }
+        }
+      },
+      query.day
+    );
+  };
+
   /**
    * Makes a basic location/date query and sends a text with the results.
    */
   checkWorking = async (query) => {
     await this.searchSpecificQuery(query);
     const available = await this.isSpecificCenterAvailable(query.centers[0]);
-    for (const phone of query.phones) {
-      sendMessage(
+    for (const phone of query.text_phones) {
+      sendText(
         `Tested with address ${query.address}, date ${query.date}, center ${
           query.centers[0]
         }. ${
@@ -180,25 +198,30 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
+    console.log("loop counter", counter);
     for (const query of this.queries) {
       await this.searchSpecificQuery(query);
       for (const center of query.centers) {
         const isAvailable = await this.isSpecificCenterAvailable(center);
         if (isAvailable) {
-          for (const phone of query.phones) {
-            sendMessage(
+          for (const phone of query.text_phones) {
+            sendText(
               `There are appointments available with search location ${query.address} and search date ${query.date} for test center ${center}.`,
               phone
             );
+          }
+          for (const phone of query.call_phones) {
             call(phone);
           }
         }
       }
     }
 
-    // every 8_000 loops (~2 days), do a test to ensure that it's working
+    // every 8,000 loops, do a test to ensure that it's working
     if (counter % 8_000 === 0) {
-      await this.checkWorking(this.queries[0]);
+      for (const query of this.queries) {
+        await this.checkWorking(query);
+      }
     }
 
     // re-call this function in two seconds
@@ -218,11 +241,11 @@ const timeout = (ms) => {
 };
 
 /**
- * Sends a specified message to a specified phone number.
+ * Sends a text to a phone number.
  * @param {string} msg Message to be texted.
  * @param {string} number Phone number for text to be sent to.
  */
-const sendMessage = (msg, number) => {
+const sendText = (msg, number) => {
   client.messages.create({
     body: msg,
     from: secrets.twilio_number,
@@ -231,7 +254,7 @@ const sendMessage = (msg, number) => {
 };
 
 /**
- * Calls a specified phone number.
+ * Calls a phone number.
  * @param {string} number Phone number to be called.
  */
 const call = (number) => {
