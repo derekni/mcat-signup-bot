@@ -27,6 +27,7 @@ class Bot {
    */
   search = async (testing = false) => {
     // send a text message to master phone to notify bot is started
+    console.log("MCAT Bot started running.");
     sendText("MCAT Bot has started running.", this.masterPhone);
 
     // launch new browser
@@ -198,7 +199,6 @@ class Bot {
    * @param {int} counter How many times this loop has iterated.
    */
   loopSearch = async (counter) => {
-    console.log("loop counter", counter);
     for (const query of this.queries) {
       await this.searchSpecificQuery(query);
       for (const center of query.centers) {
