@@ -1,5 +1,7 @@
+import Query from "../classes/query.js";
+
 const puppeteer = require("puppeteer");
-const secrets = require("./secrets.js");
+const secrets = require("../secrets.js");
 
 const accountSid = secrets.TWILIO_ACCOUNT_SID;
 const authToken = secrets.TWILIO_AUTH_TOKEN;
@@ -18,7 +20,7 @@ class Bot {
   constructor(queries) {
     this.queries = queries;
     this.months = ["April", "May", "June", "July", "August", "September"];
-    this.masterPhone = secrets.phone;
+    this.masterPhone = secrets.my_phone;
   }
 
   /**
@@ -26,9 +28,8 @@ class Bot {
    * @param {boolean} testing set to true if want to test on local computer, false if on EC2.
    */
   search = async (testing = false) => {
-    // send a text message to master phone to notify bot is started
     console.log("MCAT Bot started running.");
-    sendText("MCAT Bot has started running.", this.masterPhone);
+    text("MCAT Bot has started running.", this.masterPhone);
 
     // launch new browser
     if (testing) {
@@ -152,18 +153,14 @@ class Bot {
   /**
    * Makes a basic location/date query and sends a text with the results.
    */
-  checkWorking = async (query) => {
+  checkWorking = async (query, iterations) => {
     await this.searchSpecificQuery(query);
     const available = await this.isSpecificCenterAvailable(query.centers[0]);
     for (const phone of query.text_phones) {
-      sendText(
-        `Tested with address ${query.address}, date ${query.date}, center ${
-          query.centers[0]
-        }. ${
-          available
-            ? "Appointments are available."
-            : "No appointments available."
-        }`,
+      text(
+        `The bot has searched ${iterations} times for your query. Continuing on 
+        with queries at address ${query.address}, on month ${query.month} and 
+        day ${query.day}.`,
         phone
       );
     }
@@ -200,12 +197,18 @@ class Bot {
    */
   loopSearch = async (counter) => {
     for (const query of this.queries) {
+      // if already notified within last 60 seconds, don't search again
+      const currTime = Date.now();
+      if (this.getTimeDifferenceInSeconds(currTime, query.time) < 60) {
+        continue;
+      }
+
       await this.searchSpecificQuery(query);
       for (const center of query.centers) {
         const isAvailable = await this.isSpecificCenterAvailable(center);
         if (isAvailable) {
           for (const phone of query.text_phones) {
-            sendText(
+            text(
               `There are appointments available with search location ${query.address} and search date ${query.date} for test center ${center}.`,
               phone
             );
@@ -229,6 +232,20 @@ class Bot {
       this.loopSearch(counter + 1);
     }, 2_000);
   };
+
+  /**
+   * This function takes in two Date objects and
+   *    returns the time difference between them in seconds.
+   * @param {Date} date1 The first Date object to compare.
+   * @param {Date} date2 The second Date object to compare.
+   * @returns A number representing the time difference
+   *    between date1 and date2 in seconds.
+   */
+  getTimeDifferenceInSeconds = (date1, date2) => {
+    const difference = Math.abs(date1.getTime() - date2.getTime());
+    const seconds = Math.floor(difference / 1_000);
+    return seconds;
+  };
 }
 
 /**
@@ -245,7 +262,7 @@ const timeout = (ms) => {
  * @param {string} msg Message to be texted.
  * @param {string} number Phone number for text to be sent to.
  */
-const sendText = (msg, number) => {
+const text = (msg, number) => {
   client.messages.create({
     body: msg,
     from: secrets.twilio_number,
