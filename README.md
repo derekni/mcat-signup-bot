@@ -1,5 +1,7 @@
 # mcat-signup-bot
-Bot hosted on EC2 instance to keep checking for MCAT location availabilities. Sends texts and calls to a specified number through Twilio when an appointment is available.
+Signups for MCAT testing dates / locations can be competitive, and you don't want to be driving the next state over and sleeping in an Airbnb the night before one of the biggest tests of your life.
+
+This is a signup bot hosted on EC2 instance that refreshes for MCAT location availabilities. Sends texts and calls to a specified number through Twilio when an appointment is available.
 
 ## How to use
 
